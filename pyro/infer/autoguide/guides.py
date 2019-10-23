@@ -291,16 +291,19 @@ class AutoDelta(AutoGuide):
 
 
 class AutoNormal(AutoGuide):
-    """
-    This implementation of :class:`AutoGuide` uses Normal(0, 1) distributions
+    """This implementation of :class:`AutoGuide` uses Normal(0, 1) distributions
     to construct a guide over the entire latent space. The guide does not
     depend on the model's ``*args, **kwargs``.
 
-    It should be equivalent to pyro.contrib.autoguide.AutoDiagonalNormal, but
-    with more convenient names.  In AutoDiagonalNormal, if your model has N
-    named parameters with dimensions k_i and sum k_i = D, you get a single
-    vector of length D for your mean, and a single vector of length D for sigmas.
-    This guide gives you N distinct normals that you can call by name.
+    It should be equivalent to :class: `AutoDiagonalNormal` , but with
+    more convenient site names and with better support for
+    :class:`~pyro.infer.trace_mean_field_elbo.TraceMeanField_ELBO` .
+
+    In :class:`AutoDiagonalNormal` , if your model has N named
+    parameters with dimensions k_i and sum k_i = D, you get a single
+    vector of length D for your mean, and a single vector of length D
+    for sigmas.  This guide gives you N distinct normals that you can
+    call by name.
 
     Usage::
 
@@ -331,12 +334,12 @@ class AutoNormal(AutoGuide):
                 scale_name = "{}_{}_{}".format(self.prefix, name, 'scale')
                 loc_value = pyro.param(
                     loc_name,
-                    lambda: torch.zeros(site["fn"]._batch_shape + site["fn"]._event_shape),
+                    lambda: site["value"].new_zeros(site["fn"].shape()),
                     constraint=site["fn"].support
                 )
                 scale_value = pyro.param(
                     scale_name,
-                    lambda: torch.ones(site["fn"]._batch_shape + site["fn"]._event_shape),
+                    lambda: site["value"].new_ones(site["fn"].shape()),
                     constraint=constraints.positive
                 )
 
@@ -344,7 +347,7 @@ class AutoNormal(AutoGuide):
                     name,
                     dist.Normal(
                         loc_value, scale_value
-                    )
+                    ).to_event(site["fn"].event_dim)
                 )
         return result
 
